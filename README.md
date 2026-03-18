@@ -1,0 +1,2732 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earnova - মাইক্রো জব প্ল্যাটফর্ম</title>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Hind Siliguri', sans-serif;
+            background: #f5f7fa;
+            color: #1e293b;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #2e7d32;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        header {
+            background: linear-gradient(135deg, #2e7d32, #4caf50);
+            color: white;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-left {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .header-right {
+            cursor: pointer;
+            font-size: 18px;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            position: relative;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ff4444;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            border: 2px solid white;
+        }
+
+        .notification-dropdown {
+            position: absolute;
+            top: 60px;
+            right: 10px;
+            width: 300px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            display: none;
+            z-index: 200;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .notification-dropdown.active {
+            display: block;
+        }
+
+        .notification-header {
+            padding: 15px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .notification-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e2e8f0;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .notification-item:hover {
+            background: #f8f9fa;
+        }
+
+        .notification-item.unread {
+            background: #e8f5e9;
+        }
+
+        .notification-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 3px;
+        }
+
+        .notification-message {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 5px;
+        }
+
+        .notification-time {
+            font-size: 10px;
+            color: #94a3b8;
+        }
+
+        .page {
+            display: none;
+            padding: 0 12px 70px;
+            min-height: 100vh;
+            background: #f5f7fa;
+        }
+
+        .auth-container {
+            max-width: 380px;
+            margin: 30px auto;
+            background: white;
+            border-radius: 20px;
+            padding: 25px 20px;
+            box-shadow: 0 5px 20px rgba(46,125,50,0.1);
+        }
+
+        .auth-container h2 {
+            text-align: center;
+            color: #2e7d32;
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+
+        .auth-input {
+            width: 100%;
+            padding: 12px 14px;
+            margin: 8px 0;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 15px;
+            font-family: 'Hind Siliguri', sans-serif;
+        }
+
+        .auth-input:focus {
+            border-color: #2e7d32;
+            outline: none;
+        }
+
+        .auth-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #2e7d32, #4caf50);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            font-family: 'Hind Siliguri', sans-serif;
+            cursor: pointer;
+            margin: 15px 0 10px;
+            transition: 0.3s;
+        }
+
+        .auth-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(46,125,50,0.3);
+        }
+
+        .auth-link {
+            color: #2e7d32;
+            cursor: pointer;
+            display: block;
+            text-align: center;
+            margin: 8px 0;
+            font-size: 14px;
+        }
+
+        .error-msg {
+            color: #d32f2f;
+            text-align: center;
+            margin: 10px 0;
+            font-size: 13px;
+            display: none;
+        }
+
+        .main-banner {
+            background: linear-gradient(135deg, #1b5e20, #2e7d32);
+            border-radius: 16px;
+            padding: 25px 15px;
+            margin: 15px 0;
+            color: white;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .main-banner h2 {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+
+        .main-banner p {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin: 15px 0;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 14px;
+            padding: 12px 5px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            cursor: pointer;
+        }
+
+        .stat-card i {
+            font-size: 18px;
+            color: #2e7d32;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .label {
+            font-size: 11px;
+            color: #64748b;
+            margin-bottom: 3px;
+        }
+
+        .stat-card .value {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .announcement-card {
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+            border-radius: 14px;
+            padding: 15px;
+            margin: 15px 0;
+            color: white;
+            cursor: pointer;
+        }
+
+        .announcement-card h4 {
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .announcement-card p {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        .social-section {
+            background: white;
+            border-radius: 14px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .social-section h4 {
+            color: #1e293b;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .social-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .social-item {
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .social-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 5px;
+            font-size: 18px;
+            color: white;
+        }
+
+        .youtube { background: #ff0000; }
+        .telegram { background: #0088cc; }
+        .facebook { background: #1877f2; }
+        .whatsapp { background: #25d366; }
+        .website { background: #2e7d32; }
+
+        .social-item span {
+            font-size: 10px;
+            color: #64748b;
+        }
+
+        .micro-empty {
+            background: white;
+            border-radius: 16px;
+            padding: 40px 20px;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .micro-empty i {
+            font-size: 50px;
+            color: #2e7d32;
+            margin-bottom: 15px;
+            opacity: 0.3;
+        }
+
+        .micro-empty h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        .micro-empty p {
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        .pending-header {
+            background: white;
+            border-radius: 16px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .pending-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .pending-stat {
+            text-align: center;
+        }
+
+        .pending-stat .label {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 5px;
+        }
+
+        .pending-stat .value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2e7d32;
+        }
+
+        .job-card {
+            background: white;
+            border-radius: 14px;
+            padding: 12px;
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .job-card:hover {
+            transform: translateX(5px);
+            border-left: 4px solid #2e7d32;
+        }
+
+        .job-info h4 {
+            font-size: 14px;
+            margin-bottom: 3px;
+        }
+
+        .job-info p {
+            color: #64748b;
+            font-size: 11px;
+        }
+
+        .job-amount {
+            background: #2e7d32;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+
+        .empty-state {
+            background: white;
+            border-radius: 14px;
+            padding: 30px 15px;
+            text-align: center;
+        }
+
+        .empty-state i {
+            font-size: 40px;
+            color: #2e7d32;
+            margin-bottom: 10px;
+            opacity: 0.3;
+        }
+
+        .empty-state h4 {
+            font-size: 15px;
+            margin-bottom: 5px;
+        }
+
+        .empty-state p {
+            color: #64748b;
+            font-size: 12px;
+        }
+
+        .vip-header {
+            background: white;
+            border-radius: 16px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .vip-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .vip-stat {
+            text-align: center;
+        }
+
+        .vip-stat .label {
+            font-size: 11px;
+            color: #64748b;
+            margin-bottom: 3px;
+        }
+
+        .vip-stat .value {
+            font-size: 16px;
+            font-weight: 700;
+            color: #2e7d32;
+        }
+
+        .vip-divider {
+            height: 1px;
+            background: #e2e8f0;
+            margin: 10px 0;
+        }
+
+        .vip-ref-link {
+            background: #e8f5e9;
+            padding: 10px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+            border: 1px dashed #2e7d32;
+            font-size: 12px;
+        }
+
+        .copy-btn {
+            background: #2e7d32;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .vip-share {
+            width: 100%;
+            padding: 10px;
+            background: #2e7d32;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .level-card {
+            background: white;
+            border-radius: 14px;
+            padding: 12px;
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid;
+        }
+
+        .level-1 { border-left-color: #cd7f32; }
+        .level-2 { border-left-color: #c0c0c0; }
+        .level-3 { border-left-color: #ffd700; }
+
+        .level-info h3 {
+            font-size: 14px;
+            margin-bottom: 3px;
+        }
+
+        .level-info p {
+            font-size: 11px;
+            color: #64748b;
+        }
+
+        .level-stats {
+            text-align: right;
+        }
+
+        .level-stats .commission {
+            color: #2e7d32;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .level-stats .salary {
+            color: #ff9800;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .profile-header {
+            background: white;
+            border-radius: 18px;
+            padding: 20px;
+            margin: 15px 0;
+            position: relative;
+        }
+
+        .profile-menu-dots {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 18px;
+            cursor: pointer;
+            color: #64748b;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .profile-dropdown {
+            position: absolute;
+            top: 50px;
+            right: 15px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            display: none;
+            min-width: 180px;
+            z-index: 10;
+        }
+
+        .profile-dropdown div {
+            padding: 12px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            border-bottom: 1px solid #e8f5e9;
+        }
+
+        .profile-dropdown div:hover {
+            background: #e8f5e9;
+        }
+
+        .profile-dropdown i {
+            width: 18px;
+            color: #2e7d32;
+        }
+
+        .profile-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .profile-pic {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #2e7d32;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            color: white;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .profile-pic img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .profile-details {
+            flex: 1;
+        }
+
+        .profile-details h2 {
+            font-size: 16px;
+            margin-bottom: 3px;
+        }
+
+        .profile-details p {
+            color: #64748b;
+            font-size: 12px;
+            margin-bottom: 3px;
+        }
+
+        .profile-details .user-code {
+            background: #e8f5e9;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            display: inline-block;
+        }
+
+        .profile-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin: 15px 0;
+        }
+
+        .profile-stat {
+            background: #f8fafc;
+            padding: 10px 5px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .profile-stat .label {
+            font-size: 11px;
+            color: #64748b;
+            margin-bottom: 3px;
+        }
+
+        .profile-stat .value {
+            font-size: 14px;
+            font-weight: 700;
+            color: #2e7d32;
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .action-btn {
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: white;
+        }
+
+        .withdraw-btn {
+            background: #d32f2f;
+        }
+
+        .deposit-btn {
+            background: #1976d2;
+        }
+
+        .transaction-page {
+            background: white;
+            border-radius: 18px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .transaction-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .transaction-header h2 {
+            font-size: 18px;
+            margin-bottom: 3px;
+        }
+
+        .transaction-header p {
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        .transaction-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            margin: 8px 0;
+            font-family: 'Hind Siliguri', sans-serif;
+            font-size: 14px;
+        }
+
+        .method-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .method-option {
+            flex: 1;
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: 0.3s;
+        }
+
+        .method-option:hover {
+            background: #e8f5e9;
+        }
+
+        .method-option.active {
+            border-color: #2e7d32;
+            background: #e8f5e9;
+        }
+
+        .method-option i {
+            font-size: 20px;
+            color: #2e7d32;
+            margin-bottom: 5px;
+        }
+
+        .method-option span {
+            font-size: 13px;
+            display: block;
+        }
+
+        .transaction-submit {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 15px 0;
+            color: white;
+        }
+
+        .withdraw-submit {
+            background: #d32f2f;
+        }
+
+        .deposit-closed {
+            background: #fff3e0;
+            padding: 25px 15px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .deposit-closed i {
+            font-size: 40px;
+            color: #ff9800;
+            margin-bottom: 10px;
+        }
+
+        .deposit-closed h4 {
+            color: #ff9800;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #e8f5e9;
+            font-size: 13px;
+        }
+
+        .history-status {
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background: #fff3e0;
+            color: #ff9800;
+        }
+
+        .status-approved {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-rejected {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+
+        .job-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+
+        .job-modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .job-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e8f5e9;
+        }
+
+        .job-modal-header h3 {
+            color: #2e7d32;
+            font-size: 18px;
+        }
+
+        .job-modal-close {
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #64748b;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #f1f5f9;
+            transition: 0.3s;
+        }
+
+        .job-modal-close:hover {
+            background: #e2e8f0;
+            color: #dc3545;
+        }
+
+        .job-detail-item {
+            margin-bottom: 12px;
+        }
+
+        .job-detail-label {
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 4px;
+        }
+
+        .job-detail-value {
+            font-size: 15px;
+            color: #1e293b;
+            background: #f8fafc;
+            padding: 10px;
+            border-radius: 10px;
+            word-break: break-word;
+        }
+
+        .job-link {
+            color: #2e7d32;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .job-link:hover {
+            text-decoration: underline;
+        }
+
+        .proof-options {
+            display: flex;
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .proof-option {
+            flex: 1;
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: 0.3s;
+        }
+
+        .proof-option:hover {
+            background: #e8f5e9;
+        }
+
+        .proof-option.active {
+            border-color: #2e7d32;
+            background: #e8f5e9;
+        }
+
+        .proof-option i {
+            font-size: 24px;
+            color: #2e7d32;
+            margin-bottom: 5px;
+        }
+
+        .proof-option span {
+            font-size: 13px;
+            display: block;
+        }
+
+        .proof-input-area {
+            margin: 15px 0;
+        }
+
+        .proof-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            font-family: 'Hind Siliguri', sans-serif;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .proof-file-input {
+            display: none;
+        }
+
+        .proof-file-label {
+            display: block;
+            background: #f8fafc;
+            border: 2px dashed #2e7d32;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .proof-file-label i {
+            font-size: 40px;
+            color: #2e7d32;
+            margin-bottom: 10px;
+        }
+
+        .proof-file-label span {
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .proof-preview {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .proof-preview img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+        }
+
+        .submit-job-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #2e7d32, #4caf50);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
+        .submit-job-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 5px 12px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+            border-radius: 20px 20px 0 0;
+            z-index: 90;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: #94a3b8;
+            font-size: 18px;
+            padding: 6px 10px;
+            border-radius: 20px;
+            transition: 0.3s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        nav a span {
+            font-size: 10px;
+        }
+
+        nav a.active {
+            color: white;
+            background: #2e7d32;
+        }
+
+        .admin-crown {
+            color: #ffd700;
+        }
+
+        @media (min-width: 640px) {
+            .page {
+                max-width: 640px;
+                margin: 0 auto;
+            }
+            
+            nav {
+                max-width: 640px;
+                left: 50%;
+                transform: translateX(-50%);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="header-left">Earnova</div>
+        <div class="header-right" id="notificationIcon" onclick="toggleNotificationDropdown()">
+            <i class="fas fa-bell"></i>
+            <span class="notification-badge" id="notificationBadge">0</span>
+        </div>
+    </header>
+
+    <!-- Notification Dropdown -->
+    <div class="notification-dropdown" id="notificationDropdown">
+        <div class="notification-header">
+            <span>নোটিফিকেশন</span>
+            <span style="font-size: 12px; color: #2e7d32; cursor: pointer;" onclick="markAllAsRead()">সব পড়েছি</span>
+        </div>
+        <div id="notificationList">
+            <div style="padding: 20px; text-align: center; color: #64748b;">লোড হচ্ছে...</div>
+        </div>
+    </div>
+
+    <!-- Job Modal -->
+    <div class="job-modal" id="jobModal">
+        <div class="job-modal-content">
+            <div class="job-modal-header">
+                <h3 id="modalJobTitle">জব বিস্তারিত</h3>
+                <span class="job-modal-close" onclick="closeJobModal()">&times;</span>
+            </div>
+            <div id="modalJobDetails"></div>
+            
+            <div class="job-detail-item">
+                <div class="job-detail-label">প্রুফ জমা দিন</div>
+                <div class="proof-options">
+                    <div class="proof-option active" onclick="selectProofType('text')" id="proofTextOption">
+                        <i class="fas fa-pencil-alt"></i>
+                        <span>লিখে দিন</span>
+                    </div>
+                    <div class="proof-option" onclick="selectProofType('image')" id="proofImageOption">
+                        <i class="fas fa-image"></i>
+                        <span>ছবি দিন</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="proof-input-area" id="textProofArea">
+                <textarea class="proof-textarea" id="textProof" placeholder="আপনার প্রুফ লিখুন..."></textarea>
+            </div>
+
+            <div class="proof-input-area" id="imageProofArea" style="display: none;">
+                <input type="file" class="proof-file-input" id="imageProof" accept="image/*" onchange="previewImage(event)">
+                <label for="imageProof" class="proof-file-label">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <span>ছবি আপলোড করুন</span>
+                </label>
+                <div class="proof-preview" id="imagePreview">
+                    <img id="previewImg" src="" alt="প্রিভিউ">
+                </div>
+            </div>
+
+            <button class="submit-job-btn" id="submitJobBtn" onclick="submitJobProof()">জমা দিন</button>
+            <div id="jobSubmissionsList" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <!-- Auth Pages -->
+    <div id="authPages">
+        <!-- Login Page -->
+        <div class="page" id="loginPage" style="display: block;">
+            <div class="auth-container">
+                <h2>Earnova</h2>
+                <input type="text" id="loginEmail" class="auth-input" placeholder="ইমেল">
+                <input type="password" id="loginPassword" class="auth-input" placeholder="পাসওয়ার্ড">
+                <div id="loginError" class="error-msg"></div>
+                <button class="auth-btn" onclick="handleLogin()">লগইন</button>
+                <span class="auth-link" onclick="showAuthPage('register')">নতুন অ্যাকাউন্ট তৈরি করুন</span>
+                <span class="auth-link" onclick="handleForgotPassword()">পাসওয়ার্ড ভুলে গেছেন?</span>
+            </div>
+        </div>
+
+        <!-- Register Page -->
+        <div class="page" id="registerPage">
+            <div class="auth-container">
+                <h2>রেজিস্টার</h2>
+                <input type="text" id="regName" class="auth-input" placeholder="আপনার নাম">
+                <input type="text" id="regUsername" class="auth-input" placeholder="ইউজারনেম (৫-১০ অক্ষর)">
+                <input type="email" id="regEmail" class="auth-input" placeholder="ইমেল">
+                <input type="password" id="regPassword" class="auth-input" placeholder="পাসওয়ার্ড">
+                <input type="password" id="regConfirmPassword" class="auth-input" placeholder="পাসওয়ার্ড নিশ্চিত করুন">
+                <input type="text" id="regReferral" class="auth-input" placeholder="রেফারেল ইউজারনেম (ঐচ্ছিক)">
+                <div id="registerError" class="error-msg"></div>
+                <button class="auth-btn" onclick="handleRegister()">রেজিস্টার</button>
+                <span class="auth-link" onclick="showAuthPage('login')">লগইন পৃষ্ঠায় ফিরে যান</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" style="display: none;">
+        <!-- Home Page -->
+        <div class="page" id="homePage">
+            <!-- Main Banner -->
+            <div class="main-banner" id="homeBanner" onclick="openBannerLink()">
+                <h2 id="bannerTitle">আক্ক অর্জন করুন আরও</h2>
+                <p id="bannerText">আমাদের সাথে থাকুন, আয় করুন সীমাহীন</p>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card" onclick="showPage('vip')">
+                    <i class="fas fa-users"></i>
+                    <div class="label">রেফারেল</div>
+                    <div class="value" id="homeReferrals">0</div>
+                </div>
+                <div class="stat-card" onclick="showPage('vip')">
+                    <i class="fas fa-crown"></i>
+                    <div class="label">ভিআইপি লেভেল</div>
+                    <div class="value" id="homeVipLevel">0</div>
+                </div>
+                <div class="stat-card" onclick="showPage('withdraw')">
+                    <i class="fas fa-wallet"></i>
+                    <div class="label">ব্যালেন্স</div>
+                    <div class="value">৳<span id="homeBalance">0</span></div>
+                </div>
+            </div>
+
+            <!-- Announcement Card -->
+            <div class="announcement-card" id="announcementCard" onclick="openAnnouncement()">
+                <h4 id="announcementTitle">আমাদের নতুন কাজ!</h4>
+                <p id="announcementText">নতুন কাজ এসেছে। এখনই মাইক্রো জব পেজে গিয়ে কাজ শুরু করুন।</p>
+            </div>
+
+            <!-- Social Channels -->
+            <div class="social-section">
+                <h4>আমাদের অফিসিয়াল চ্যানেল</h4>
+                <div class="social-grid" id="socialChannels">
+                    <!-- Dynamic content -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Micro Jobs Page -->
+        <div class="page" id="microPage">
+            <h3 style="color: #2e7d32; margin: 15px 0;">উপলব্ধ কাজ</h3>
+            <div id="microJobsList"></div>
+        </div>
+
+        <!-- Pending Jobs Page -->
+        <div class="page" id="pendingPage">
+            <div class="pending-header">
+                <div class="pending-stats">
+                    <div class="pending-stat">
+                        <div class="label">পেন্ডিং</div>
+                        <div class="value" id="pendingJobsCount">0</div>
+                    </div>
+                    <div class="pending-stat">
+                        <div class="label">অ্যাপ্রুভড</div>
+                        <div class="value" id="approvedJobsCount">0</div>
+                    </div>
+                </div>
+            </div>
+            <div id="pendingJobsList"></div>
+        </div>
+
+        <!-- VIP Page -->
+        <div class="page" id="vipPage">
+            <div class="vip-header">
+                <div class="vip-stats">
+                    <div class="vip-stat">
+                        <div class="label">আপনার লেভেল</div>
+                        <div class="value" id="userVipLevel">০</div>
+                    </div>
+                    <div class="vip-stat">
+                        <div class="label">কমিশন</div>
+                        <div class="value" id="userCommission">২%</div>
+                    </div>
+                    <div class="vip-stat">
+                        <div class="label">স্যালারি</div>
+                        <div class="value" id="userSalary">০৳</div>
+                    </div>
+                </div>
+                <div class="vip-divider"></div>
+                <div class="vip-ref-link">
+                    <span id="vipReferralLink">লোড হচ্ছে...</span>
+                    <button class="copy-btn" onclick="copyReferralLink()">কপি</button>
+                </div>
+                <button class="vip-share" onclick="shareReferral()">
+                    <i class="fas fa-share-alt"></i> শেয়ার করুন
+                </button>
+                <div style="margin-top: 10px; font-size: 13px;">
+                    <p><strong>মোট রেফারেল:</strong> <span id="totalReferralsVip">0</span></p>
+                    <p><strong>বোনাস:</strong> ৳<span id="referralBonusVip">0</span></p>
+                    <p><strong>কমিশন:</strong> ৳<span id="referralCommissionVip">0</span></p>
+                </div>
+            </div>
+
+            <h4 style="color: #2e7d32; font-size: 15px; margin: 15px 0 5px;">ভিআইপি লেভেল সমূহ</h4>
+            
+            <!-- Level 1 -->
+            <div class="level-card level-1">
+                <div class="level-info">
+                    <h3>লেভেল ১ (ব্রোঞ্জ)</h3>
+                    <p>৫০+ রেফারেল</p>
+                </div>
+                <div class="level-stats">
+                    <div class="commission">কমিশন: ৩%</div>
+                    <div class="salary">স্যালারি: ১০০৳</div>
+                </div>
+            </div>
+
+            <!-- Level 2 -->
+            <div class="level-card level-2">
+                <div class="level-info">
+                    <h3>লেভেল ২ (সিলভার)</h3>
+                    <p>১০০+ রেফারেল</p>
+                </div>
+                <div class="level-stats">
+                    <div class="commission">কমিশন: ৪%</div>
+                    <div class="salary">স্যালারি: ২৫০৳</div>
+                </div>
+            </div>
+
+            <!-- Level 3 -->
+            <div class="level-card level-3">
+                <div class="level-info">
+                    <h3>লেভেল ৩ (গোল্ড)</h3>
+                    <p>২০০+ রেফারেল</p>
+                </div>
+                <div class="level-stats">
+                    <div class="commission">কমিশন: ৫%</div>
+                    <div class="salary">স্যালারি: ৫০০৳</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Page -->
+        <div class="page" id="profilePage">
+            <div class="profile-header">
+                <div class="profile-menu-dots" onclick="toggleProfileMenu()">
+                    <i class="fas fa-ellipsis-v"></i>
+                </div>
+                <div class="profile-dropdown" id="profileDropdown">
+                    <div onclick="editProfile()"><i class="fas fa-user-edit"></i> প্রোফাইল এডিট</div>
+                    <div onclick="aboutUs()"><i class="fas fa-info-circle"></i> আমাদের সম্পর্কে</div>
+                    <div onclick="contactAdmin()"><i class="fas fa-headset"></i> কন্টাক্ট এডমিন</div>
+                    <div onclick="logout()"><i class="fas fa-sign-out-alt"></i> লগআউট</div>
+                </div>
+
+                <div class="profile-info">
+                    <div class="profile-pic" id="profilePic" onclick="uploadProfilePic()">
+                        👤
+                    </div>
+                    <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="handleProfilePicUpload(event)">
+                    <div class="profile-details">
+                        <h2 id="profileName">লোড হচ্ছে...</h2>
+                        <p>@<span id="profileUsername">username</span></p>
+                        <span class="user-code" id="profileUserCode">CODE123</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-stats">
+                <div class="profile-stat">
+                    <div class="label">মোট আয়</div>
+                    <div class="value">৳<span id="profileTotalEarning">0</span></div>
+                </div>
+                <div class="profile-stat">
+                    <div class="label">উইথড্র</div>
+                    <div class="value">৳<span id="profileWithdrawn">0</span></div>
+                </div>
+                <div class="profile-stat">
+                    <div class="label">পেন্ডিং</div>
+                    <div class="value">৳<span id="profilePending">0</span></div>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="action-btn withdraw-btn" onclick="showPage('withdraw')">
+                    <i class="fas fa-arrow-up"></i> উইথড্র
+                </button>
+                <button class="action-btn deposit-btn" onclick="showPage('deposit')">
+                    <i class="fas fa-arrow-down"></i> ডিপোজিট
+                </button>
+            </div>
+        </div>
+
+        <!-- Withdraw Page -->
+        <div class="page" id="withdrawPage">
+            <div class="transaction-page">
+                <div class="transaction-header">
+                    <h2>উইথড্র</h2>
+                    <p>আপনার ব্যালেন্স: ৳<span id="withdrawBalance">0</span></p>
+                </div>
+                
+                <div class="job-detail-item">
+                    <div class="job-detail-label">পদ্ধতি নির্বাচন করুন</div>
+                    <div class="method-selector">
+                        <div class="method-option active" onclick="selectWithdrawMethod('bkash')" id="methodBkash">
+                            <i class="fas fa-mobile-alt"></i>
+                            <span>বিকাশ</span>
+                        </div>
+                        <div class="method-option" onclick="selectWithdrawMethod('nagad')" id="methodNagad">
+                            <i class="fas fa-mobile-alt"></i>
+                            <span>নগদ</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <input type="text" id="withdrawNumber" class="transaction-input" placeholder="নম্বর দিন (যেমন: 017xxxxxxxx)">
+                <input type="number" id="withdrawAmount" class="transaction-input" placeholder="পরিমাণ (সর্বনিম্ন ৭০)">
+                <button class="transaction-submit withdraw-submit" onclick="submitWithdraw()">উইথড্র করুন</button>
+                
+                <div style="margin-top: 20px;">
+                    <h4 style="font-size: 14px;">ইতিহাস</h4>
+                    <div id="withdrawHistory"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Deposit Page -->
+        <div class="page" id="depositPage">
+            <div class="transaction-page">
+                <div class="transaction-header">
+                    <h2>ডিপোজিট</h2>
+                    <p>আপনার ব্যালেন্স: ৳<span id="depositBalance">0</span></p>
+                </div>
+                <div class="deposit-closed">
+                    <i class="fas fa-clock"></i>
+                    <h4>ডিপোজিট বন্ধ আছে</h4>
+                    <p>খুব শীঘ্রই চালু হবে</p>
+                </div>
+                <div style="margin-top: 20px;">
+                    <h4 style="font-size: 14px;">ইতিহাস</h4>
+                    <div id="depositHistory"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav>
+        <a class="home" onclick="showPage('home')">
+            <i class="fas fa-home"></i>
+            <span>হোম</span>
+        </a>
+        <a class="micro" onclick="showPage('micro')">
+            <i class="fas fa-briefcase"></i>
+            <span>মাইক্রো</span>
+        </a>
+        <a class="pending" onclick="showPage('pending')">
+            <i class="fas fa-clock"></i>
+            <span>পেন্ডিং</span>
+        </a>
+        <a class="vip" onclick="showPage('vip')">
+            <i class="fas fa-crown"></i>
+            <span>ভিআইপি</span>
+        </a>
+        <a class="profile" onclick="showPage('profile')">
+            <i class="fas fa-user"></i>
+            <span>প্রোফাইল</span>
+        </a>
+    </nav>
+
+    <script>
+        // ==================== FIREBASE কনফিগারেশন ====================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAU5Qcqa3DZIBQxoVZtpa4PA7av7sDm7jc",
+            authDomain: "arnova-d7212.firebaseapp.com",
+            projectId: "arnova-d7212",
+            storageBucket: "arnova-d7212.firebasestorage.app",
+            messagingSenderId: "879423669140",
+            appId: "1:879423669140:web:64cb1ca8fb2f2734440581",
+            measurementId: "G-7QJHP15XLL"
+        };
+
+        // Firebase Initialize
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+
+        // ==================== গ্লোবাল ভেরিয়েবল ====================
+        let currentUser = null;
+        let unsubscribeNotifications = null;
+        let currentJobId = null;
+        let selectedProofType = 'text';
+        let selectedImageFile = null;
+        let selectedWithdrawMethod = 'bkash';
+        
+        // ==================== নতুন রেফারেল বেস URL ====================
+        const APP_BASE_URL = "https://saimun2519.github.io/ArnOva-U/";
+
+        // ==================== লোডিং কন্ট্রোল ====================
+        function showLoading() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        // ==================== ইউআরএল থেকে রেফারেল পড়া ====================
+        function getReferralFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const ref = urlParams.get('ref');
+            if (ref) {
+                const regReferral = document.getElementById('regReferral');
+                if (regReferral) {
+                    regReferral.value = ref;
+                }
+            }
+        }
+
+        // ==================== রিয়েল-টাইম ইউজার ডাটা লিসেনার ====================
+        function setupUserDataListener() {
+            if (!currentUser) return;
+            
+            db.collection('users').doc(currentUser.id)
+                .onSnapshot((doc) => {
+                    if (doc.exists) {
+                        const newData = doc.data();
+                        currentUser = { id: doc.id, ...newData };
+                        
+                        const balance = (newData.totalEarning || 0) - (newData.withdrawn || 0);
+                        
+                        document.getElementById('profileTotalEarning').textContent = newData.totalEarning || 0;
+                        document.getElementById('profileWithdrawn').textContent = newData.withdrawn || 0;
+                        document.getElementById('homeBalance').textContent = balance;
+                        document.getElementById('withdrawBalance').textContent = balance;
+                        document.getElementById('depositBalance').textContent = balance;
+                        
+                        updateVipPage();
+                    }
+                });
+        }
+
+        // ==================== ভিআইপি পেজ আপডেট ====================
+        function updateVipPage() {
+            if (!currentUser) return;
+            
+            const referralLink = `${APP_BASE_URL}?ref=${currentUser.username}`;
+            
+            const vipRefLink = document.getElementById('vipReferralLink');
+            if (vipRefLink) {
+                vipRefLink.textContent = referralLink;
+            }
+        }
+
+        // ==================== রেফারেল ফাংশন ====================
+        function copyReferralLink() {
+            const link = `${APP_BASE_URL}?ref=${currentUser.username}`;
+            
+            navigator.clipboard.writeText(link).then(() => {
+                alert('✅ রেফারেল লিংক কপি হয়েছে!');
+            }).catch(() => {
+                const textarea = document.createElement('textarea');
+                textarea.value = link;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                alert('✅ রেফারেল লিংক কপি হয়েছে!');
+            });
+        }
+
+        function shareReferral() {
+            const link = `${APP_BASE_URL}?ref=${currentUser.username}`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Earnova',
+                    text: 'আমার রেফারেল লিংকে যোগ দিন এবং আয় করুন!',
+                    url: link
+                }).catch(() => {
+                    copyReferralLink();
+                });
+            } else {
+                copyReferralLink();
+            }
+        }
+
+        // ==================== জব সাবমিশন লিসেনার ====================
+        function setupJobSubmissionsListener() {
+            if (!currentUser) return;
+            
+            db.collection('jobSubmissions')
+                .where('userEmail', '==', currentUser.email)
+                .onSnapshot((snapshot) => {
+                    let pendingCount = 0;
+                    let approvedCount = 0;
+                    
+                    snapshot.forEach(doc => {
+                        const status = doc.data().status;
+                        if (status === 'pending') pendingCount++;
+                        else if (status === 'approved') approvedCount++;
+                    });
+                    
+                    document.getElementById('pendingJobsCount').textContent = pendingCount;
+                    document.getElementById('approvedJobsCount').textContent = approvedCount;
+                    
+                    loadPendingJobs();
+                });
+        }
+
+        // ==================== নোটিফিকেশন ফাংশন ====================
+        function toggleNotificationDropdown() {
+            const dropdown = document.getElementById('notificationDropdown');
+            dropdown.classList.toggle('active');
+            if (dropdown.classList.contains('active')) {
+                loadNotifications();
+            }
+        }
+
+        function loadNotifications() {
+            if (!currentUser) return;
+            
+            const list = document.getElementById('notificationList');
+            
+            db.collection('notifications')
+                .where('target', 'in', ['all', currentUser.username])
+                .orderBy('time', 'desc')
+                .limit(20)
+                .get()
+                .then((snapshot) => {
+                    if (snapshot.empty) {
+                        list.innerHTML = '<div style="padding: 20px; text-align: center; color: #64748b;">কোনো নোটিফিকেশন নেই</div>';
+                        return;
+                    }
+                    
+                    let html = '';
+                    snapshot.forEach(doc => {
+                        const notif = doc.data();
+                        const isRead = notif.readBy && notif.readBy.includes(currentUser.username);
+                        html += `
+                            <div class="notification-item ${isRead ? '' : 'unread'}" onclick="markAsRead('${doc.id}')">
+                                <div class="notification-title">${notif.title || 'নতুন নোটিফিকেশন'}</div>
+                                <div class="notification-message">${notif.message}</div>
+                                <div class="notification-time">${new Date(notif.time).toLocaleString()}</div>
+                            </div>
+                        `;
+                    });
+                    list.innerHTML = html;
+                })
+                .catch(error => {
+                    list.innerHTML = '<div style="padding: 20px; text-align: center; color: #f44336;">নোটিফিকেশন লোড করতে সমস্যা হয়েছে</div>';
+                });
+        }
+
+        function markAsRead(notificationId) {
+            if (!currentUser) return;
+            
+            db.collection('notifications').doc(notificationId).update({
+                readBy: firebase.firestore.FieldValue.arrayUnion(currentUser.username)
+            }).then(() => {
+                loadNotifications();
+                updateNotificationBadge();
+            });
+        }
+
+        function markAllAsRead() {
+            if (!currentUser) return;
+            
+            db.collection('notifications')
+                .where('target', 'in', ['all', currentUser.username])
+                .get()
+                .then((snapshot) => {
+                    const batch = db.batch();
+                    snapshot.forEach(doc => {
+                        batch.update(doc.ref, {
+                            readBy: firebase.firestore.FieldValue.arrayUnion(currentUser.username)
+                        });
+                    });
+                    return batch.commit();
+                })
+                .then(() => {
+                    loadNotifications();
+                    updateNotificationBadge();
+                });
+        }
+
+        function updateNotificationBadge() {
+            if (!currentUser) return;
+            
+            db.collection('notifications')
+                .where('target', 'in', ['all', currentUser.username])
+                .get()
+                .then((snapshot) => {
+                    let unreadCount = 0;
+                    snapshot.forEach(doc => {
+                        const notif = doc.data();
+                        if (!notif.readBy || !notif.readBy.includes(currentUser.username)) {
+                            unreadCount++;
+                        }
+                    });
+                    document.getElementById('notificationBadge').textContent = unreadCount;
+                    document.getElementById('notificationBadge').style.display = unreadCount > 0 ? 'flex' : 'none';
+                });
+        }
+
+        function setupNotificationListener() {
+            if (!currentUser) return;
+            
+            if (unsubscribeNotifications) {
+                unsubscribeNotifications();
+            }
+            
+            unsubscribeNotifications = db.collection('notifications')
+                .where('target', 'in', ['all', currentUser.username])
+                .onSnapshot(() => {
+                    updateNotificationBadge();
+                });
+        }
+
+        // ==================== উইথড্র মেথড সিলেক্ট ====================
+        function selectWithdrawMethod(method) {
+            selectedWithdrawMethod = method;
+            
+            if (method === 'bkash') {
+                document.getElementById('methodBkash').classList.add('active');
+                document.getElementById('methodNagad').classList.remove('active');
+            } else {
+                document.getElementById('methodBkash').classList.remove('active');
+                document.getElementById('methodNagad').classList.add('active');
+            }
+        }
+
+        // ==================== জব মোডাল ফাংশন ====================
+        function openJobModal(jobId, jobTitle, jobDescription, jobAmount, jobType, jobLink) {
+            currentJobId = jobId;
+            
+            document.getElementById('modalJobTitle').textContent = jobTitle;
+            
+            let details = `
+                <div class="job-detail-item">
+                    <div class="job-detail-label">বিবরণ</div>
+                    <div class="job-detail-value">${jobDescription}</div>
+                </div>
+                <div class="job-detail-item">
+                    <div class="job-detail-label">পরিমাণ</div>
+                    <div class="job-detail-value">৳${jobAmount}</div>
+                </div>
+            `;
+            
+            if (jobType !== 'general' && jobLink) {
+                details += `
+                    <div class="job-detail-item">
+                        <div class="job-detail-label">লিংক</div>
+                        <div class="job-detail-value">
+                            <a href="${jobLink}" target="_blank" class="job-link">${jobLink}</a>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (jobType === 'gmail' && jobLink) {
+                const parts = jobLink.split('|');
+                details += `
+                    <div class="job-detail-item">
+                        <div class="job-detail-label">জিমেইল আইডি</div>
+                        <div class="job-detail-value">${parts[0] || ''}</div>
+                    </div>
+                    <div class="job-detail-item">
+                        <div class="job-detail-label">পাসওয়ার্ড</div>
+                        <div class="job-detail-value">${parts[1] || ''}</div>
+                    </div>
+                `;
+            }
+            
+            document.getElementById('modalJobDetails').innerHTML = details;
+            
+            selectedProofType = 'text';
+            selectedImageFile = null;
+            document.getElementById('proofTextOption').classList.add('active');
+            document.getElementById('proofImageOption').classList.remove('active');
+            document.getElementById('textProofArea').style.display = 'block';
+            document.getElementById('imageProofArea').style.display = 'none';
+            document.getElementById('textProof').value = '';
+            document.getElementById('imagePreview').style.display = 'none';
+            
+            loadJobSubmissions(jobId);
+            
+            document.getElementById('jobModal').style.display = 'flex';
+        }
+
+        function closeJobModal() {
+            document.getElementById('jobModal').style.display = 'none';
+            currentJobId = null;
+            selectedImageFile = null;
+        }
+
+        function selectProofType(type) {
+            selectedProofType = type;
+            
+            if (type === 'text') {
+                document.getElementById('proofTextOption').classList.add('active');
+                document.getElementById('proofImageOption').classList.remove('active');
+                document.getElementById('textProofArea').style.display = 'block';
+                document.getElementById('imageProofArea').style.display = 'none';
+            } else {
+                document.getElementById('proofTextOption').classList.remove('active');
+                document.getElementById('proofImageOption').classList.add('active');
+                document.getElementById('textProofArea').style.display = 'none';
+                document.getElementById('imageProofArea').style.display = 'block';
+            }
+        }
+
+        function previewImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                selectedImageFile = file;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('previewImg').src = e.target.result;
+                    document.getElementById('imagePreview').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function loadJobSubmissions(jobId) {
+            if (!currentUser) return;
+            
+            try {
+                const snapshot = await db.collection('jobSubmissions')
+                    .where('jobId', '==', jobId)
+                    .where('userEmail', '==', currentUser.email)
+                    .orderBy('submittedAt', 'desc')
+                    .get();
+                
+                const listDiv = document.getElementById('jobSubmissionsList');
+                
+                if (snapshot.empty) {
+                    listDiv.innerHTML = '';
+                    return;
+                }
+                
+                let html = '<div class="job-detail-item"><div class="job-detail-label">আপনার জমা দেওয়া প্রুফ</div>';
+                
+                snapshot.forEach(doc => {
+                    const sub = doc.data();
+                    let statusColor = '#ff9800';
+                    let statusText = 'পেন্ডিং';
+                    
+                    if (sub.status === 'approved') {
+                        statusColor = '#4caf50';
+                        statusText = 'অ্যাপ্রুভড';
+                    } else if (sub.status === 'rejected') {
+                        statusColor = '#f44336';
+                        statusText = 'রিজেক্টেড';
+                    }
+                    
+                    html += `
+                        <div style="background: #f8fafc; padding: 10px; border-radius: 8px; margin-top: 8px;">
+                            <div style="font-size: 12px; color: #64748b;">${new Date(sub.submittedAt).toLocaleString()}</div>
+                            <div style="margin: 5px 0;">${sub.proof}</div>
+                            <div style="color: ${statusColor}; font-size: 12px; font-weight: 600;">${statusText}</div>
+                            ${sub.reviewReason ? `<div style="color: #f44336; font-size: 11px; margin-top: 5px;">কারণ: ${sub.reviewReason}</div>` : ''}
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                listDiv.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Error loading submissions:', error);
+            }
+        }
+
+        async function submitJobProof() {
+            if (!currentUser || !currentJobId) {
+                alert('দয়া করে লগইন করুন');
+                return;
+            }
+            
+            let proof = '';
+            
+            if (selectedProofType === 'text') {
+                proof = document.getElementById('textProof').value.trim();
+                if (!proof) {
+                    alert('অনুগ্রহ করে প্রুফ লিখুন');
+                    return;
+                }
+            } else {
+                if (!selectedImageFile) {
+                    alert('অনুগ্রহ করে একটি ছবি নির্বাচন করুন');
+                    return;
+                }
+                
+                showLoading();
+                try {
+                    const storageRef = storage.ref();
+                    const imageRef = storageRef.child(`job_proofs/${currentJobId}/${currentUser.id}_${Date.now()}.jpg`);
+                    await imageRef.put(selectedImageFile);
+                    proof = await imageRef.getDownloadURL();
+                } catch (error) {
+                    alert('ছবি আপলোড করতে সমস্যা হয়েছে');
+                    hideLoading();
+                    return;
+                }
+            }
+            
+            showLoading();
+            try {
+                const jobDoc = await db.collection('availableJobs').doc(currentJobId).get();
+                if (!jobDoc.exists) {
+                    alert('জব পাওয়া যায়নি');
+                    hideLoading();
+                    return;
+                }
+                
+                const job = jobDoc.data();
+                
+                await db.collection('jobSubmissions').add({
+                    jobId: currentJobId,
+                    jobTitle: job.title,
+                    amount: job.amount,
+                    userEmail: currentUser.email,
+                    userName: currentUser.name,
+                    proof: proof,
+                    proofType: selectedProofType,
+                    status: 'pending',
+                    submittedAt: new Date().toISOString()
+                });
+                
+                alert('আপনার কাজ জমা দেওয়া হয়েছে! অ্যাডমিন অ্যাপ্রুভ করলে টাকা যোগ হবে।');
+                
+                document.getElementById('textProof').value = '';
+                selectedImageFile = null;
+                document.getElementById('imagePreview').style.display = 'none';
+                
+                await loadJobSubmissions(currentJobId);
+                
+            } catch (error) {
+                alert('জব জমা দিতে সমস্যা হয়েছে');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // ==================== অথেনটিকেশন ফাংশন ====================
+        function showAuthPage(page) {
+            document.querySelectorAll('#authPages .page').forEach(p => p.style.display = 'none');
+            document.getElementById(page + 'Page').style.display = 'block';
+        }
+
+        async function handleRegister() {
+            const name = document.getElementById('regName').value;
+            const username = document.getElementById('regUsername').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            const confirmPass = document.getElementById('regConfirmPassword').value;
+            const referral = document.getElementById('regReferral').value;
+            const errorDiv = document.getElementById('registerError');
+
+            if (!name || !username || !email || !password) {
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = 'সব তথ্য দিন';
+                return;
+            }
+
+            if (username.length < 5 || username.length > 10) {
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = 'ইউজারনেম ৫-১০ অক্ষরের হতে হবে';
+                return;
+            }
+
+            if (password !== confirmPass) {
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = 'পাসওয়ার্ড মেলেনি';
+                return;
+            }
+
+            showLoading();
+            errorDiv.style.display = 'none';
+
+            try {
+                const usernameQuery = await db.collection('users').where('username', '==', username).get();
+                if (!usernameQuery.empty) {
+                    throw new Error('এই ইউজারনেম ইতিমধ্যে আছে');
+                }
+
+                const emailQuery = await db.collection('users').where('email', '==', email).get();
+                if (!emailQuery.empty) {
+                    throw new Error('এই ইমেইল ইতিমধ্যে আছে');
+                }
+
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                
+                const userCode = generateUserCode();
+
+                let referralBonus = 0;
+                let referrerData = null;
+                if (referral) {
+                    const referrerQuery = await db.collection('users').where('username', '==', referral).get();
+                    if (!referrerQuery.empty) {
+                        referralBonus = 3;
+                        referrerData = referrerQuery.docs[0];
+                    }
+                }
+
+                const userData = {
+                    uid: userCredential.user.uid,
+                    name: name,
+                    username: username,
+                    email: email,
+                    userCode: userCode,
+                    totalEarning: referralBonus,
+                    withdrawn: 0,
+                    pendingWithdraw: 0,
+                    referralEarning: referralBonus,
+                    referrals: 0,
+                    referredBy: referral || null,
+                    vipLevel: 0,
+                    commissionRate: 2,
+                    monthlySalary: 0,
+                    lastSalaryDate: null,
+                    isAdmin: username === 'saimun_ahmad',
+                    createdAt: new Date().toISOString(),
+                    profilePic: null
+                };
+
+                await db.collection('users').doc(userCredential.user.uid).set(userData);
+
+                if (referrerData) {
+                    await db.collection('users').doc(referrerData.id).update({
+                        referralEarning: firebase.firestore.FieldValue.increment(3),
+                        totalEarning: firebase.firestore.FieldValue.increment(3),
+                        referrals: firebase.firestore.FieldValue.increment(1)
+                    });
+                }
+
+                hideLoading();
+                alert('রেজিস্ট্রেশন সফল! এখন লগইন করুন।');
+                showAuthPage('login');
+                
+            } catch (error) {
+                hideLoading();
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = error.message;
+            }
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const errorDiv = document.getElementById('loginError');
+
+            if (!email || !password) {
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = 'ইমেইল এবং পাসওয়ার্ড দিন';
+                return;
+            }
+
+            showLoading();
+            errorDiv.style.display = 'none';
+
+            try {
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                
+                const userDoc = await db.collection('users').doc(userCredential.user.uid).get();
+                
+                if (!userDoc.exists) {
+                    throw new Error('ইউজার ডাটা পাওয়া যায়নি');
+                }
+
+                currentUser = { id: userDoc.id, ...userDoc.data() };
+                
+                document.getElementById('authPages').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'block';
+                
+                setupNotificationListener();
+                setupUserDataListener();
+                setupJobSubmissionsListener();
+                await updateAllUserData();
+                showPage('home');
+                checkMonthlySalary();
+                
+            } catch (error) {
+                hideLoading();
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = 'ভুল ইমেইল বা পাসওয়ার্ড';
+            }
+        }
+
+        function handleForgotPassword() {
+            const email = prompt('আপনার ইমেইল দিন:');
+            if (!email) return;
+            
+            showLoading();
+            auth.sendPasswordResetEmail(email)
+                .then(() => {
+                    hideLoading();
+                    alert('পাসওয়ার্ড রিসেট লিংক আপনার ইমেইলে পাঠানো হয়েছে!');
+                })
+                .catch(error => {
+                    hideLoading();
+                    alert('ইমেইল পাঠাতে সমস্যা হয়েছে: ' + error.message);
+                });
+        }
+
+        async function logout() {
+            showLoading();
+            try {
+                await auth.signOut();
+                if (unsubscribeNotifications) {
+                    unsubscribeNotifications();
+                }
+                currentUser = null;
+                document.getElementById('mainApp').style.display = 'none';
+                document.getElementById('authPages').style.display = 'block';
+                showAuthPage('login');
+            } catch (error) {
+                console.error('Logout error:', error);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // ==================== ইউজার ডাটা ফাংশন ====================
+        async function updateAllUserData() {
+            if (!currentUser) return;
+
+            try {
+                const freshUserDoc = await db.collection('users').doc(currentUser.id).get();
+                if (freshUserDoc.exists) {
+                    currentUser = { id: freshUserDoc.id, ...freshUserDoc.data() };
+                }
+
+                const referralsSnapshot = await db.collection('users')
+                    .where('referredBy', '==', currentUser.username)
+                    .get();
+                const referralCount = referralsSnapshot.size;
+
+                const withdrawSnapshot = await db.collection('withdrawRequests')
+                    .where('userEmail', '==', currentUser.email)
+                    .where('status', '==', 'pending')
+                    .get();
+                const pendingWithdraw = withdrawSnapshot.docs.reduce((sum, doc) => sum + (doc.data().amount || 0), 0);
+
+                const submissionsSnapshot = await db.collection('jobSubmissions')
+                    .where('userEmail', '==', currentUser.email)
+                    .get();
+                
+                const pendingJobs = submissionsSnapshot.docs.filter(d => d.data().status === 'pending').length;
+                const approvedJobs = submissionsSnapshot.docs.filter(d => d.data().status === 'approved').length;
+
+                let vipLevel = 0;
+                let commissionRate = 2;
+                let monthlySalary = 0;
+                let levelName = '০';
+
+                if (referralCount >= 200) {
+                    vipLevel = 3;
+                    commissionRate = 5;
+                    monthlySalary = 500;
+                    levelName = '৩';
+                } else if (referralCount >= 100) {
+                    vipLevel = 2;
+                    commissionRate = 4;
+                    monthlySalary = 250;
+                    levelName = '২';
+                } else if (referralCount >= 50) {
+                    vipLevel = 1;
+                    commissionRate = 3;
+                    monthlySalary = 100;
+                    levelName = '১';
+                }
+
+                const balance = (currentUser.totalEarning || 0) - (currentUser.withdrawn || 0);
+
+                document.getElementById('homeReferrals').textContent = referralCount;
+                document.getElementById('homeVipLevel').textContent = levelName;
+                document.getElementById('homeBalance').textContent = balance;
+
+                document.getElementById('pendingJobsCount').textContent = pendingJobs;
+                document.getElementById('approvedJobsCount').textContent = approvedJobs;
+                
+                document.getElementById('userVipLevel').textContent = levelName;
+                document.getElementById('userCommission').textContent = commissionRate + '%';
+                document.getElementById('userSalary').textContent = monthlySalary + '৳';
+                document.getElementById('totalReferralsVip').textContent = referralCount;
+                document.getElementById('referralBonusVip').textContent = currentUser.referralEarning || 0;
+                
+                document.getElementById('vipReferralLink').textContent = `${APP_BASE_URL}?ref=${currentUser.username}`;
+
+                let commission = 0;
+                for (const doc of referralsSnapshot.docs) {
+                    const refData = doc.data();
+                    const refSubmissions = await db.collection('jobSubmissions')
+                        .where('userEmail', '==', refData.email)
+                        .where('status', '==', 'approved')
+                        .get();
+                    const refEarnings = refSubmissions.docs.reduce((sum, d) => sum + (d.data().amount || 0), 0);
+                    commission += refEarnings * (commissionRate / 100);
+                }
+                document.getElementById('referralCommissionVip').textContent = commission.toFixed(2);
+
+                document.getElementById('profileName').textContent = currentUser.name;
+                document.getElementById('profileUsername').textContent = currentUser.username;
+                document.getElementById('profileUserCode').textContent = currentUser.userCode;
+                document.getElementById('profileTotalEarning').textContent = currentUser.totalEarning || 0;
+                document.getElementById('profileWithdrawn').textContent = currentUser.withdrawn || 0;
+                document.getElementById('profilePending').textContent = pendingWithdraw;
+
+                if (currentUser.profilePic) {
+                    document.getElementById('profilePic').innerHTML = `<img src="${currentUser.profilePic}">`;
+                }
+
+                document.getElementById('withdrawBalance').textContent = balance;
+                document.getElementById('depositBalance').textContent = balance;
+
+                await loadSiteSettings();
+                await loadSocialChannels();
+                await loadPendingJobs();
+                await loadWithdrawHistory();
+                await loadDepositHistory();
+                await loadMicroJobs();
+
+            } catch (error) {
+                console.error('Error updating user data:', error);
+            }
+        }
+
+        async function checkMonthlySalary() {
+            if (!currentUser) return;
+            
+            const today = new Date();
+            const todayDate = today.getDate();
+            const todayMonth = today.getMonth();
+            const todayYear = today.getFullYear();
+            
+            if (todayDate === 28) {
+                const lastSalary = currentUser.lastSalaryDate ? new Date(currentUser.lastSalaryDate) : null;
+                
+                if (!lastSalary || 
+                    lastSalary.getMonth() !== todayMonth || 
+                    lastSalary.getFullYear() !== todayYear) {
+                    
+                    const referralsSnapshot = await db.collection('users')
+                        .where('referredBy', '==', currentUser.username)
+                        .get();
+                    const referralCount = referralsSnapshot.size;
+                    
+                    let salary = 0;
+                    if (referralCount >= 200) salary = 500;
+                    else if (referralCount >= 100) salary = 250;
+                    else if (referralCount >= 50) salary = 100;
+                    
+                    if (salary > 0) {
+                        await db.collection('users').doc(currentUser.id).update({
+                            totalEarning: firebase.firestore.FieldValue.increment(salary),
+                            lastSalaryDate: new Date().toISOString()
+                        });
+                        
+                        currentUser.totalEarning += salary;
+                        alert(`আপনার মাসিক স্যালারি ৳${salary} যোগ হয়েছে!`);
+                    }
+                }
+            }
+        }
+
+        // ==================== সাইট সেটিংস ====================
+        async function loadSiteSettings() {
+            try {
+                const settingsDoc = await db.collection('settings').doc('site').get();
+                if (settingsDoc.exists) {
+                    const settings = settingsDoc.data();
+                    document.getElementById('bannerTitle').textContent = settings.bannerTitle || 'আক্ক অর্জন করুন আরও';
+                    document.getElementById('bannerText').textContent = settings.bannerText || 'আমাদের সাথে থাকুন, আয় করুন সীমাহীন';
+                    document.getElementById('announcementTitle').textContent = settings.announcementTitle || 'আমাদের নতুন কাজ!';
+                    document.getElementById('announcementText').textContent = settings.announcementText || 'নতুন কাজ এসেছে। এখনই মাইক্রো জব পেজে গিয়ে কাজ শুরু করুন।';
+                }
+            } catch (error) {
+                console.error('Error loading settings:', error);
+            }
+        }
+
+        // ==================== সোশ্যাল চ্যানেল ====================
+        async function loadSocialChannels() {
+            const container = document.getElementById('socialChannels');
+            if (!container) return;
+
+            try {
+                const settingsDoc = await db.collection('settings').doc('social').get();
+                const channels = settingsDoc.exists ? settingsDoc.data() : {};
+
+                const channelList = [
+                    { name: 'youtube', icon: 'fab fa-youtube', color: 'youtube', link: channels.youtube },
+                    { name: 'telegram', icon: 'fab fa-telegram', color: 'telegram', link: channels.telegram },
+                    { name: 'facebook', icon: 'fab fa-facebook-f', color: 'facebook', link: channels.facebook },
+                    { name: 'whatsapp', icon: 'fab fa-whatsapp', color: 'whatsapp', link: channels.whatsapp },
+                    { name: 'website', icon: 'fas fa-globe', color: 'website', link: channels.website }
+                ];
+
+                let html = '';
+                let hasChannels = false;
+                
+                channelList.forEach(channel => {
+                    if (channel.link) {
+                        hasChannels = true;
+                        html += `
+                            <div class="social-item" onclick="window.open('${channel.link}', '_blank')">
+                                <div class="social-icon ${channel.color}">
+                                    <i class="${channel.icon}"></i>
+                                </div>
+                                <span>${channel.name}</span>
+                            </div>
+                        `;
+                    }
+                });
+
+                if (!hasChannels) {
+                    html = '<p style="color: #64748b; text-align: center; grid-column: span 4;">কোনো চ্যানেল নেই</p>';
+                }
+
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading social channels:', error);
+                container.innerHTML = '<p style="color: #64748b; text-align: center;">সোশ্যাল চ্যানেল লোড করতে সমস্যা হয়েছে</p>';
+            }
+        }
+
+        // ==================== মাইক্রো জব ====================
+        async function loadMicroJobs() {
+            const container = document.getElementById('microJobsList');
+            if (!container) return;
+
+            try {
+                const jobsSnapshot = await db.collection('availableJobs')
+                    .orderBy('createdAt', 'desc')
+                    .get();
+
+                if (jobsSnapshot.empty) {
+                    container.innerHTML = `
+                        <div class="micro-empty">
+                            <i class="fas fa-briefcase"></i>
+                            <h3>কোনো কাজ উপলব্ধ নেই</h3>
+                            <p>খুব শীঘ্রই নতুন কাজ আসছে। অনুগ্রহ করে পরে আবার চেষ্টা করুন।</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                jobsSnapshot.forEach(doc => {
+                    const job = doc.data();
+                    html += `
+                        <div class="job-card" onclick="openJobModal('${doc.id}', '${job.title.replace(/'/g, "\\'")}', '${job.description.replace(/'/g, "\\'")}', ${job.amount}, '${job.type}', '${job.link || ''}')">
+                            <div class="job-info">
+                                <h4>${job.title}</h4>
+                                <p>${job.description.substring(0, 50)}...</p>
+                            </div>
+                            <div class="job-amount">৳${job.amount}</div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+
+            } catch (error) {
+                container.innerHTML = '<div class="micro-empty"><p>জব লোড করতে সমস্যা হয়েছে</p></div>';
+            }
+        }
+
+        // ==================== পেন্ডিং জব ====================
+        async function loadPendingJobs() {
+            const container = document.getElementById('pendingJobsList');
+            if (!container || !currentUser) return;
+
+            try {
+                const submissionsSnapshot = await db.collection('jobSubmissions')
+                    .where('userEmail', '==', currentUser.email)
+                    .orderBy('submittedAt', 'desc')
+                    .get();
+
+                if (submissionsSnapshot.empty) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-clock"></i>
+                            <h4>কোনো কাজ জমা দেননি</h4>
+                            <p>মাইক্রো জব পেজ থেকে কাজ করুন</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                submissionsSnapshot.forEach(doc => {
+                    const s = doc.data();
+                    let statusColor = '#ff9800';
+                    let statusText = 'পেন্ডিং';
+                    
+                    if (s.status === 'approved') {
+                        statusColor = '#4caf50';
+                        statusText = 'অ্যাপ্রুভড';
+                    } else if (s.status === 'rejected') {
+                        statusColor = '#f44336';
+                        statusText = 'রিজেক্টেড';
+                    }
+                    
+                    html += `
+                        <div class="job-card">
+                            <div class="job-info">
+                                <h4>${s.jobTitle}</h4>
+                                <p>${new Date(s.submittedAt).toLocaleString()} - <span style="color: ${statusColor};">${statusText}</span></p>
+                            </div>
+                            <div class="job-amount">৳${s.amount}</div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+
+            } catch (error) {
+                console.error('Error loading pending jobs:', error);
+            }
+        }
+
+        // ==================== পেজ নেভিগেশন ====================
+        function showPage(page) {
+            if (!currentUser) return;
+
+            document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+            const navItem = document.querySelector(`nav a.${page}`);
+            if (navItem) navItem.classList.add('active');
+
+            document.querySelectorAll('#mainApp .page').forEach(p => p.style.display = 'none');
+            document.getElementById(page + 'Page').style.display = 'block';
+
+            if (page === 'pending') loadPendingJobs();
+            if (page === 'micro') loadMicroJobs();
+            if (page === 'vip') updateVipPage();
+        }
+
+        // ==================== প্রোফাইল ফাংশন ====================
+        function toggleProfileMenu() {
+            const dropdown = document.getElementById('profileDropdown');
+            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function uploadProfilePic() {
+            document.getElementById('fileInput').click();
+        }
+
+        async function handleProfilePicUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            showLoading();
+            try {
+                const storageRef = storage.ref();
+                const profileRef = storageRef.child(`profile_pics/${currentUser.id}`);
+                await profileRef.put(file);
+                const downloadUrl = await profileRef.getDownloadURL();
+
+                await db.collection('users').doc(currentUser.id).update({
+                    profilePic: downloadUrl
+                });
+
+                currentUser.profilePic = downloadUrl;
+                document.getElementById('profilePic').innerHTML = `<img src="${downloadUrl}">`;
+                
+            } catch (error) {
+                alert('ছবি আপলোড করতে সমস্যা হয়েছে');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function editProfile() {
+            const newName = prompt('নতুন নাম দিন:', currentUser.name);
+            if (newName && newName.trim()) {
+                showLoading();
+                db.collection('users').doc(currentUser.id).update({
+                    name: newName.trim()
+                })
+                .then(() => {
+                    currentUser.name = newName.trim();
+                    updateAllUserData();
+                    alert('প্রোফাইল আপডেট হয়েছে!');
+                })
+                .catch(error => {
+                    alert('প্রোফাইল আপডেট করতে সমস্যা হয়েছে');
+                })
+                .finally(() => {
+                    hideLoading();
+                });
+            }
+        }
+
+        async function aboutUs() {
+            try {
+                const settingsDoc = await db.collection('settings').doc('site').get();
+                const aboutText = settingsDoc.exists ? settingsDoc.data().aboutUs : 'Earnova - একটি মাইক্রো জব প্ল্যাটফর্ম। আমরা বাংলাদেশের তরুণদের জন্য অনলাইনে আয়ের সুযোগ তৈরি করি।';
+                alert(aboutText);
+            } catch (error) {
+                console.error('Error loading about us:', error);
+            }
+        }
+
+        async function contactAdmin() {
+            try {
+                const settingsDoc = await db.collection('settings').doc('site').get();
+                const email = settingsDoc.exists ? settingsDoc.data().contactEmail : 'admin@earnova.com';
+                const whatsapp = settingsDoc.exists ? settingsDoc.data().contactWhatsapp : '017xxxxxxxx';
+                alert(`ইমেইল: ${email}\nহোয়াটসঅ্যাপ: ${whatsapp}`);
+            } catch (error) {
+                console.error('Error loading contact:', error);
+            }
+        }
+
+        function openBannerLink() {}
+
+        function openAnnouncement() {
+            showPage('micro');
+        }
+
+        // ==================== উইথড্র ====================
+        async function submitWithdraw() {
+            const number = document.getElementById('withdrawNumber').value.trim();
+            const amount = parseFloat(document.getElementById('withdrawAmount').value);
+            const balance = (currentUser.totalEarning || 0) - (currentUser.withdrawn || 0);
+
+            if (!number || !amount) {
+                alert('নম্বর এবং পরিমাণ দিন');
+                return;
+            }
+
+            if (isNaN(amount) || amount < 70) {
+                alert('সর্বনিম্ন উইথড্র ৭০ টাকা');
+                return;
+            }
+
+            if (amount > balance) {
+                alert('পর্যাপ্ত ব্যালেন্স নেই');
+                return;
+            }
+
+            if (selectedWithdrawMethod === 'bkash' && !number.startsWith('01')) {
+                alert('সঠিক বিকাশ নম্বর দিন (০১ দিয়ে শুরু)');
+                return;
+            }
+            if (selectedWithdrawMethod === 'nagad' && !number.startsWith('01')) {
+                alert('সঠিক নগদ নম্বর দিন (০১ দিয়ে শুরু)');
+                return;
+            }
+
+            showLoading();
+            try {
+                await db.collection('withdrawRequests').add({
+                    userEmail: currentUser.email,
+                    userName: currentUser.name,
+                    userUsername: currentUser.username,
+                    method: selectedWithdrawMethod,
+                    number: number,
+                    amount: amount,
+                    status: 'pending',
+                    requestedAt: new Date().toISOString()
+                });
+                
+                alert('উইথড্র রিকোয়েস্ট সাবমিট হয়েছে! অ্যাডমিন অ্যাপ্রুভ করলে টাকা পাবেন।');
+                
+                document.getElementById('withdrawNumber').value = '';
+                document.getElementById('withdrawAmount').value = '';
+                
+                await updateAllUserData();
+                
+            } catch (error) {
+                alert('উইথড্র রিকোয়েস্ট সাবমিট করতে সমস্যা হয়েছে');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function loadWithdrawHistory() {
+            const container = document.getElementById('withdrawHistory');
+            if (!container || !currentUser) return;
+
+            try {
+                const snapshot = await db.collection('withdrawRequests')
+                    .where('userEmail', '==', currentUser.email)
+                    .orderBy('requestedAt', 'desc')
+                    .get();
+
+                if (snapshot.empty) {
+                    container.innerHTML = '<p style="color: #64748b;">কোনো ইতিহাস নেই</p>';
+                    return;
+                }
+
+                let html = '';
+                snapshot.forEach(doc => {
+                    const w = doc.data();
+                    const methodName = w.method === 'bkash' ? 'বিকাশ' : 'নগদ';
+                    html += `
+                        <div class="history-item">
+                            <div>${methodName}: ৳${w.amount}<br><small>${new Date(w.requestedAt).toLocaleString()}</small></div>
+                            <span class="history-status status-${w.status}">${w.status === 'pending' ? 'পেন্ডিং' : w.status === 'approved' ? 'অ্যাপ্রুভড' : 'রিজেক্টেড'}</span>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+
+            } catch (error) {
+                console.error('Error loading withdraw history:', error);
+            }
+        }
+
+        async function loadDepositHistory() {
+            const container = document.getElementById('depositHistory');
+            if (!container || !currentUser) return;
+
+            try {
+                const snapshot = await db.collection('depositRequests')
+                    .where('userEmail', '==', currentUser.email)
+                    .orderBy('requestedAt', 'desc')
+                    .get();
+
+                if (snapshot.empty) {
+                    container.innerHTML = '<p style="color: #64748b;">কোনো ইতিহাস নেই</p>';
+                    return;
+                }
+
+                let html = '';
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    html += `
+                        <div class="history-item">
+                            <div>৳${d.amount}<br><small>${new Date(d.requestedAt).toLocaleString()}</small></div>
+                            <span class="history-status status-${d.status}">${d.status}</span>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+
+            } catch (error) {
+                console.error('Error loading deposit history:', error);
+            }
+        }
+
+        // ==================== ইউটিলিটি ====================
+        function generateUserCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            const length = Math.floor(Math.random() * 6) + 5;
+            let code = '';
+            for (let i = 0; i < length; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
+
+        // ==================== অথ স্টেট লিসেনার ====================
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (userDoc.exists) {
+                    currentUser = { id: userDoc.id, ...userDoc.data() };
+                    document.getElementById('authPages').style.display = 'none';
+                    document.getElementById('mainApp').style.display = 'block';
+                    
+                    setupNotificationListener();
+                    setupUserDataListener();
+                    setupJobSubmissionsListener();
+                    await updateAllUserData();
+                    showPage('home');
+                    checkMonthlySalary();
+                }
+            }
+        });
+
+        // ==================== ডকুমেন্ট রেডি ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            getReferralFromUrl();
+            
+            selectedWithdrawMethod = 'bkash';
+            
+            document.addEventListener('click', function(event) {
+                const dropdown = document.getElementById('profileDropdown');
+                const dots = document.querySelector('.profile-menu-dots');
+                if (dropdown && dots && !dots.contains(event.target) && !dropdown.contains(event.target)) {
+                    dropdown.style.display = 'none';
+                }
+
+                const notifDropdown = document.getElementById('notificationDropdown');
+                const notifIcon = document.getElementById('notificationIcon');
+                if (notifDropdown && notifIcon && !notifIcon.contains(event.target) && !notifDropdown.contains(event.target)) {
+                    notifDropdown.classList.remove('active');
+                }
+            });
+            
+            // ব্যাক বাটন প্রিভেন্ট (লগইন পেজে যেতে বাধা দিতে)
+            history.pushState(null, null, location.href);
+            window.onpopstate = function () {
+                history.go(1);
+            };
+        });
+    </script>
+</body>
+</html>
